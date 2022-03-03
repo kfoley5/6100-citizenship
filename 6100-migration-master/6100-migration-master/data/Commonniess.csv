@@ -1,0 +1,37 @@
+﻿mode,type,order,name
+A01b,born,1,"Descent (born in
+country)"
+A02a,born,2,Birth in country
+A03a,born,3,Foundlings
+A04,born,4,"Establishment of
+parentage"
+A06,resident,1,"Residence-based
+acquisition"
+A06a,resident,2,"Residence-based
+acquisition
+– residence
+conditions"
+A06b,resident,3,"Residence-based
+acquisition –
+renunciation
+condition"
+A06c,resident,4,"Residence-based
+acquisition
+– language condition"
+A06d,resident,5,"Residence-based
+acquisition – civic
+knowledge or cultural
+assimilation condition"
+A06e,resident,6,"Residence-based
+acquisition
+– criminal record
+condition"
+A06f,resident,7,"Residence-based
+acquisition –
+economic resources
+condition"
+A08,family,1,Marriage
+A10,family,2,"Adoption or
+guardianship"
+A21,resident,8,Very long residence
+A25,special,1,Public service
