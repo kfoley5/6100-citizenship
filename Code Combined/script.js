@@ -1,29 +1,35 @@
 // Set width and height as width and height of window
 const width = window.innerWidth;
 const height = window.innerHeight;
-const margin = {top: 50, left: 0, right: 0, bottom: 100};
+const margin = {top: 0, left: 0, right: 0, bottom: 100};
 
 const plot = d3.select("#map");
 const W = plot.node().clientWidth;
 const H = plot.node().clientHeight;
 let yPos = 0;
 
+
+function parseCountries(d) {
+    return {
+        country: d.Country,
+        pop: +d.population,
+        lon: d.lon,
+        lat: d.lat
+    }
+} 
+
 const svg2 = plot.append("svg")
 	.attr("width",1500)
-	.attr("height",1000)
+	.attr("height",800)
 
 const projection = d3.geoMercator()
-	.translate([width/2, height/2])
-	.scale(200)
+	.translate([width/2, height/2+200])
+	.scale(160)
 	.center([0,0]);
-	
+
 const countries = d3.geoPath().projection(projection);
 
 const USA = {lat:37.0902, lon:-95.7129};
-
-const rScale = d3.scaleSqrt()
-.domain([1057487, 11182111])
-.range([10, 20]);
 
 
 // load data  
@@ -33,6 +39,16 @@ var countryPromise = d3.csv("./data/countries10.csv", parseCountries);
 Promise.all([worldmapPromise, countryPromise])
 	.then(function([worldmap, country]){
 
+const pop = {
+    min: d3.min(country, function(d) { return +d.pop; }),
+    max: d3.max(country, function(d) { return +d.pop; })
+    };
+
+        
+const rScale = d3.scaleSqrt()
+    .domain([pop.min, pop.max])
+    .range([20, 50]);
+        
 	// draw map
 	svg2.selectAll("path")
 			.data(worldmap.features)
@@ -40,54 +56,68 @@ Promise.all([worldmapPromise, countryPromise])
 			.append("path")
 			.attr("class","continent")
 			.attr("d", countries)
-			.attr("fill","black")
+			.attr("fill","none")
 			.attr("stroke","grey");
 
-
-    svg2.append("circle")
-        .attr("cx",projection([USA.lon, USA.lat])[0])
-        .attr("cy",projection([USA.lon, USA.lat])[1])
-        .attr("r", "5px")
-        .attr("fill", "yellow");
-
-
-        svg2.selectAll(".country")
+    var popCircles = svg2.selectAll(".country")
         .data(country)
         .enter()
         .append("circle")
-        .attr("class","country")
-        .attr("cx", function(d) {return projection([d.lon, d.lat])[0];})
-        .attr("cy", function(d) {return projection([d.lon, d.lat])[1];})
-        .attr("r","10px")
-        .attr("fill", "yellow");
+            .attr("class", "country")
+            .attr("cx", function(d) {return projection([USA.lon, USA.lat])[0];})
+            .attr("cy", function(d) {return projection([USA.lon, USA.lat])[1];})
+            //.attr("r", function(d) { return rScale(d.pop);})
+            .attr("r", 0)
+            .attr("fill", "none")
+            .attr("stroke", "white")
+            .attr("stroke-width", 6)
+            .attr("opacity", .5);
 
-
-        svg2.selectAll(".line")
+    var mapArcs = svg2.selectAll(".line")
             .data(country)
             .enter()
             .append("path")
 			.attr("class","line")
 			.attr("d",d=>{
-				let startPt = projection([USA.lon, USA.lat]);
-				let endPt = projection([d.lon, d.lat]);
-				let p = `M ${startPt[0]}, ${startPt[1]}, L ${startPt[0]}, ${startPt[1]}, ${endPt[0]}, ${endPt[1]}`;
+				let startPt = projection([d.lon, d.lat]);
+                let endPt = projection([d.lon, d.lat]);
+				//let endPt = projection([USA.lon, USA.lat]);
+				//let p = `M ${startPt[0]}, ${startPt[1]}, L ${startPt[0]}, ${startPt[1]}, ${endPt[0]}, ${endPt[1]}`;
+                let p = `M ${startPt[0]}, ${startPt[1]}, L ${startPt[0]}, ${startPt[1]}, ${endPt[0]}, ${endPt[1]}`;
 				return p;
 			})
 			.style("fill", "none")
-			.attr("stroke", "yellow")
+			.attr("stroke", "white")
 			.attr("opactity",0.6)
             .attr("stroke-width", "2px")
-    })
 
-    function parseCountries(d) {
-        return {
-            country: d.Country,
-            pop: d.population,
-            lon: d.lon,
-            lat: d.lat
-        }
-    } 
+mapArcs.transition()
+        .delay(500)
+        .duration(1000)
+        .attr("d",d=>{
+            let startPt = projection([d.lon, d.lat]);
+            let endPt = projection([USA.lon, USA.lat]);
+            //let p = `M ${startPt[0]}, ${startPt[1]}, L ${startPt[0]}, ${startPt[1]}, ${endPt[0]}, ${endPt[1]}`;
+            let p = `M ${startPt[0]}, ${startPt[1]}, L ${startPt[0]}, ${startPt[1]}, ${endPt[0]}, ${endPt[1]}`;
+            return p;
+})
 
+popCircles.transition()
+    .delay(1800)
+    .duration(1000)
+    .attr("r", function(d) { return rScale(d.pop);})
+
+/*document.getElementById(mapArcs[0]).transition()
+        .delay(500)
+        .duration(1200)
+        .attr("d",d=>{
+            let startPt = projection([d.lon, d.lat]);
+            let endPt2 = projection([USA.lon, USA.lat]);
+            //let p = `M ${startPt[0]}, ${startPt[1]}, L ${startPt[0]}, ${startPt[1]}, ${endPt[0]}, ${endPt[1]}`;
+            let p = `M ${startPt[0]}, ${startPt[1]}, L ${startPt[0]}, ${startPt[1]}, ${endPt2[0]}, ${endPt2[1]}`;
+            return p;
+        
+    }); */
 
 d3.csv("./data/Commonniess.csv").then(function(data) {
 
@@ -98,7 +128,7 @@ d3.csv("./data/Commonniess.csv").then(function(data) {
     const canvas = d3.select("#chart")
         .append("svg")
         .attr("width", width)
-        .attr("height", height);
+        .attr("height", height-50);
 
     /*Create scale
     */
@@ -111,13 +141,7 @@ d3.csv("./data/Commonniess.csv").then(function(data) {
     .domain([1, 8])
     .range([height-margin.bottom, 150]);
 
-
-    /*Define Tooltips
-    */
-    const textbox = d3.select("#chart")
-        .append("div")
-        .attr("id", "textbox");
-
+//Define lines for chart
     const lines = canvas.selectAll("rect")
         .data(data)
         .enter()
@@ -129,6 +153,7 @@ d3.csv("./data/Commonniess.csv").then(function(data) {
         .attr("fill", "rgb(78, 130, 131)");
 
     canvas.on("mouseover", function () {
+
         lines.transition()
             .delay(500)
             .duration(1200)
@@ -145,7 +170,7 @@ d3.csv("./data/Commonniess.csv").then(function(data) {
     canvas.append("text")
         .attr("class", "cat")
         .attr("x", 435)
-        .attr("y", (height-margin.bottom)+50)
+        .attr("y", (height-margin.bottom)+45)
         .attr("text-anchor","left")
         .text("Birthright")
         .attr("fill", "white")
@@ -154,7 +179,7 @@ d3.csv("./data/Commonniess.csv").then(function(data) {
     canvas.append("text")
         .attr("class", "cat")
         .attr("x", 675)
-        .attr("y", (height-margin.bottom)+50)
+        .attr("y", (height-margin.bottom)+45)
         .attr("text-anchor","left")
         .text("Residential")
         .attr("fill", "white")
@@ -163,40 +188,53 @@ d3.csv("./data/Commonniess.csv").then(function(data) {
     canvas.append("text")
         .attr("class", "cat")
         .attr("x", 935)
-        .attr("y", (height-margin.bottom)+50)
+        .attr("y", (height-margin.bottom)+45)
         .attr("text-anchor","left")
         .text("Familial")
         .attr("fill", "white")
         .attr("font-size", 20);
 
-
     canvas.append("text")
         .attr("class", "cat")
         .attr("x", 1190)
-        .attr("y", (height-margin.bottom)+50)
+        .attr("y", (height-margin.bottom)+45)
         .attr("text-anchor","left")
         .text("Special")
         .attr("fill", "white")
         .attr("font-size", 20);
 
-// Generate textbox and hover effect
-    lines.on("mouseover", function(e, d){
-        textbox.style("visibility", "visible")
-            .html(`${d.description}`);
-            
+// Generate description text and hover effect
+
+var lineDescript = canvas.append('text')
+    .attr("x", 935)
+    .attr("y", height-margin.bottom-300)
+    .text(`${data.title}`)
+    .style("opacity", 0)
+    .attr("fill", "white")
+    .attr("font-size", 30)
+    .attr("font-weight", 400);
+
+    lines.on("mouseover", function(d){
+
+        lineDescript.style("opacity", 1);
+
         d3.select(this)
             .attr("stroke", "white")
             .attr("stroke-width", 5)
             .attr("stroke-opacity", .5);
-        
-        }).on("mouseout", function(){
 
-        textbox.style("visibility","hidden")
-            d3.select(this)
+    }).on("mouseout", function() {
+        
+        lineDescript.style("opacity", 0);
+
+        d3.select(this)
             .attr("stroke", "none")
             .attr("stroke-width", 0);
-            });
-    });
+            });  
+    })
+//*********************************************************************//
+//********************************* STEP VISUAL ***********************//
+
 
 const svg = d3.select("#chart2")
     .append("svg")
@@ -207,7 +245,7 @@ const svg = d3.select("#chart2")
 // Draw Endpoints //
 svg.append("circle")
     .attr("cx", width/2-585)
-    .attr("cy", height/2)
+    .attr("cy", height/2+100)
     .attr("r", 20)
     .style("fill", "none")
     .style("stroke", "rgb(255,255,255,.5)")
@@ -215,7 +253,7 @@ svg.append("circle")
 
 svg.append("circle")
     .attr("cx", width/2+585)
-    .attr("cy", height/2)
+    .attr("cy", height/2+100)
     .attr("r", 20)
     .style("fill", "none")
     .style("stroke", "rgb(255,255,255,.5)")
@@ -232,15 +270,15 @@ svg.selectAll("text").remove();
 svg.append("line")
     .attr("x1", width/2-550)
     .attr("x2", width/2-550)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78, 130, 131)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
     .transition()
         .duration(1200)
         .attr("x2", width/2+550)
-        .attr("y2", height/2)
+        .attr("y2", height/2+100)
 });
 
 // **************************************************************** //
@@ -255,21 +293,21 @@ svg.selectAll("text").remove();
 svg.append("line")
     .attr("x1", width/2-550)
     .attr("x2", width/2-550)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
     .transition()
         .duration(800)
         .attr("x2", width/2-416.88)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2-411.88)
     .attr("x2", width/2-411.88)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -277,13 +315,13 @@ svg.append("line")
         .delay(800)
         .duration(800)
         .attr("x2", width/2-278.76)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2-273.76)
     .attr("x2", width/2-273.76)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -291,13 +329,13 @@ svg.append("line")
         .delay(1600)
         .duration(800)
         .attr("x2", width/2-140.64)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2-135.64)
     .attr("x2", width/2-135.64)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -305,13 +343,13 @@ svg.append("line")
         .delay(2400)
         .duration(800)
         .attr("x2", width/2-2.51)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2+2.49)
     .attr("x2", width/2+2.49)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -319,13 +357,13 @@ svg.append("line")
         .delay(3200)
         .duration(800)
         .attr("x2", width/2+135.62)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2+140.62)
     .attr("x2", width/2+140.62)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -333,13 +371,13 @@ svg.append("line")
         .delay(4000)
         .duration(800)
         .attr("x2", width/2+273.75)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2+278.75)
     .attr("x2", width/2+278.75)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -347,13 +385,13 @@ svg.append("line")
         .delay(4800)
         .duration(800)
         .attr("x2", width/2+411.88)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2+416.88)
     .attr("x2", width/2+416.88)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -361,156 +399,284 @@ svg.append("line")
         .delay(5600)
         .duration(800)
         .attr("x2", width/2+550)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 /////Green Lines/////
 //rgb(78,130,131)
-svg.append("line")
+var w_txt1 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)
+    .text("Three Year LPR")
+    .style("opacity", 0)
+    .style("font-size", 30)
+    .style("font-weight", 400);
+
+var w_line1 = svg.append("line")
     .attr("x1", width/2-550)
     .attr("x2", width/2-550)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
-    .transition()
+    
+    w_line1.transition()
         .duration(800)
         .attr("x2", width/2-416.88)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
-svg.append("line")
+    w_line1.on("mouseover", function(){
+            w_txt1.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            w_txt1.style("opacity", 0);
+        });    
+//2
+var w_txt2 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)
+    .text("Common Household")
+    .style("opacity", 0)
+    .style("font-size", 30)
+    .style("font-weight", 400);
+
+var w_line2 =svg.append("line")
     .attr("x1", width/2-411.88)
     .attr("x2", width/2-411.88)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
+    .attr("element-anchor", "center");
+    
+    w_line2.transition()
         .delay(800)
         .duration(800)
         .attr("x2", width/2-278.76)
-        .attr("y2", height/2)
+        .attr("y2", height/2+100)
     .transition()
         .delay(6400)
+        .duration(800)
+        .attr("y1", height/2+50)
+        .attr("y2", height/2+50);
+
+    w_line2.on("mouseover", function(){
+            w_txt2.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            w_txt2.style("opacity", 0);
+        });    
+//3
+var w_txt3 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)
+    .text("Continuous Residence")
+    .style("opacity", 0)
+    .style("font-size", 30)
+    .style("font-weight", 400);
+
+var w_line3 = svg.append("line")
+    .attr("x1", width/2-273.76)
+    .attr("x2", width/2-273.76)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
+    .attr("stroke", "rgb(78,130,131)")
+    .attr("stroke-width", 15)
+    .attr("element-anchor", "center");
+    
+    w_line3.transition()
+        .delay(1600)
+        .duration(800)
+        .attr("x2", width/2-140.64)
+        .attr("y2", height/2+100)
+    .transition()
+        .delay(5600)
+        .duration(800)
+        .attr("y1", height/2)
+        .attr("y2", height/2);
+
+    w_line3.on("mouseover", function(){
+            w_txt3.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            w_txt3.style("opacity", 0);
+        });     
+//4
+var w_txt4 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)
+    .text("Language Fundamentals")
+    .style("opacity", 0)
+    .style("font-size", 30)
+    .style("font-weight", 400);
+
+var w_line4 = svg.append("line")
+    .attr("x1", width/2-135.64)
+    .attr("x2", width/2-135.64)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
+    .attr("stroke", "rgb(78,130,131)")
+    .attr("stroke-width", 15)
+    .attr("element-anchor", "center");
+    
+    w_line4.transition()
+        .delay(2400)
+        .duration(800)
+        .attr("x2", width/2-2.51)
+        .attr("y2", height/2+100)
+    .transition()
+        .delay(4800)
         .duration(800)
         .attr("y1", height/2-50)
         .attr("y2", height/2-50);
 
-svg.append("line")
-    .attr("x1", width/2-273.76)
-    .attr("x2", width/2-273.76)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    w_line4.on("mouseover", function(){
+            w_txt4.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            w_txt4.style("opacity", 0);
+        });     
+//5
+var w_txt5 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)  
+    .text("Civic Knowledge Test")
+    .style("opacity", 0)
+    .style("font-size", 30)
+    .style("font-weight", 400);
+
+var w_line5 = svg.append("line")
+    .attr("x1", width/2+2.49)
+    .attr("x2", width/2+2.49)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
-        .delay(1600)
+    .attr("element-anchor", "center");
+
+    w_line5.transition()
+        .delay(3200)
         .duration(800)
-        .attr("x2", width/2-140.64)
-        .attr("y2", height/2)
+        .attr("x2", width/2+135.62)
+        .attr("y2", height/2+100)
     .transition()
-        .delay(5600)
+        .delay(4000)
         .duration(800)
         .attr("y1", height/2-100)
         .attr("y2", height/2-100);
 
-svg.append("line")
-    .attr("x1", width/2-135.64)
-    .attr("x2", width/2-135.64)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    w_line5.on("mouseover", function(){
+            w_txt5.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            w_txt5.style("opacity", 0);
+        });
+//6
+var w_txt6 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)  
+    .text("Proof of Moral Character")
+    .style("opacity", 0)
+    .style("font-size", 30)
+    .style("font-weight", 400);
+
+var w_line6 = svg.append("line")
+    .attr("x1", width/2+140.62)
+    .attr("x2", width/2+140.62)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
-        .delay(2400)
+    .attr("element-anchor", "center");
+
+    w_line6.transition()
+        .delay(4000)
         .duration(800)
-        .attr("x2", width/2-2.51)
-        .attr("y2", height/2)
+        .attr("x2", width/2+273.75)
+        .attr("y2", height/2+100)
     .transition()
-        .delay(4800)
+        .delay(3200)
         .duration(800)
         .attr("y1", height/2-150)
         .attr("y2", height/2-150);
 
-svg.append("line")
-    .attr("x1", width/2+2.49)
-    .attr("x2", width/2+2.49)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
-    .attr("stroke", "rgb(78,130,131)")
-    .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
-        .delay(3200)
-        .duration(800)
-        .attr("x2", width/2+135.62)
-        .attr("y2", height/2)
-    .transition()
-        .delay(4000)
-        .duration(800)
-        .attr("y1", height/2-200)
-        .attr("y2", height/2-200);;
+    w_line6.on("mouseover", function(){
+            w_txt6.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            w_txt6.style("opacity", 0);
+        });
+//7
+var w_txt7 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)  
+    .text("Application Fees")
+    .style("opacity", 0)
+    .style("font-size", 30);
 
-svg.append("line")
-    .attr("x1", width/2+140.62)
-    .attr("x2", width/2+140.62)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
-    .attr("stroke", "rgb(78,130,131)")
-    .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
-        .delay(4000)
-        .duration(800)
-        .attr("x2", width/2+273.75)
-        .attr("y2", height/2)
-    .transition()
-        .delay(3200)
-        .duration(800)
-        .attr("y1", height/2-250)
-        .attr("y2", height/2-250);
-
-svg.append("line")
+var w_line7 = svg.append("line")
     .attr("x1", width/2+278.75)
     .attr("x2", width/2+278.75)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
+    .attr("element-anchor", "center");
+    
+    w_line7.transition()
         .delay(4800)
         .duration(800)
         .attr("x2", width/2+411.88)
-        .attr("y2", height/2)
+        .attr("y2", height/2+100)
     .transition()
         .delay(2400)
         .duration(800)
-        .attr("y1", height/2-300)
-        .attr("y2", height/2-300);
+        .attr("y1", height/2-200)
+        .attr("y2", height/2-200);
 
-svg.append("line")
-    .attr("x1", width/2+416.88)
-    .attr("x2", width/2+416.88)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
-    .attr("stroke", "rgb(78,130,131)")
-    .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
-        .delay(5600)
-        .duration(800)
-        .attr("x2", width/2+550)
-        .attr("y2", height/2)
-    .transition()
-        .delay(1600)
-        .duration(800)
-        .attr("y1", height/2-350)
-        .attr("y2", height/2-350);
-});
+    w_line7.on("mouseover", function(){
+            w_txt7.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            w_txt7.style("opacity", 0);
+        });
+//8
+    var w_txt8 = svg.append('text')
+        .attr("x", width/2-550)
+        .attr("y", 150)
+        .text("Oath of Allegience")
+        .style("opacity", 0)
+        .style("font-size", 30)
+        .style("font-weight", 400);
+    
+    var w_line8 = svg.append("line")
+        .attr("x1", width/2+416.88)
+        .attr("x2", width/2+416.88)
+        .attr("y1", height/2+100)
+        .attr("y2", height/2+100)
+        .attr("stroke", "rgb(78,130,131)")
+        .attr("stroke-width", 15)
+        .attr("element-anchor", "left");
+    
+        w_line8.transition()
+            .delay(5600)
+            .duration(800)
+            .attr("x2", width/2+550)
+            .attr("y2", height/2+100)
+        .transition()
+            .delay(1600)
+            .duration(800)
+            .attr("y1", height/2-250)
+            .attr("y2", height/2-250);
+    
+        w_line8.on("mouseover", function(){
+            w_txt8.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            w_txt8.style("opacity", 0);
+        });
+
+    });
 
 // **************************************************************** //
 //Residency
@@ -524,21 +690,21 @@ svg.selectAll("text").remove();
 svg.append("line")
     .attr("x1", width/2-550)
     .attr("x2", width/2-550)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
     .transition()
         .duration(800)
         .attr("x2", width/2-397.14)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2-392.14)
     .attr("x2", width/2-392.14)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -546,13 +712,13 @@ svg.append("line")
         .delay(800)
         .duration(800)
         .attr("x2", width/2-239.28)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2-234.28)
     .attr("x2", width/2-234.28)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -560,13 +726,13 @@ svg.append("line")
         .delay(1600)
         .duration(800)
         .attr("x2", width/2-81.42)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2-76.42)
     .attr("x2", width/2-76.42)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -574,13 +740,13 @@ svg.append("line")
         .delay(2400)
         .duration(800)
         .attr("x2", width/2+76.44)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2+81.44)
     .attr("x2", width/2+81.44)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -588,13 +754,13 @@ svg.append("line")
         .delay(3200)
         .duration(800)
         .attr("x2", width/2+224.3)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2+229.3)
     .attr("x2", width/2+229.3)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -602,13 +768,13 @@ svg.append("line")
         .delay(4000)
         .duration(800)
         .attr("x2", width/2+382.16)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2+387.16)
     .attr("x2", width/2+387.16)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -616,28 +782,28 @@ svg.append("line")
         .delay(4800)
         .duration(800)
         .attr("x2", width/2+550)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 /////Green Lines/////
 //rgb(78,130,131)
 svg.append("line")
     .attr("x1", width/2-550)
     .attr("x2", width/2-550)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
     .transition()
         .duration(800)
         .attr("x2", width/2-397.14)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2-392.14)
     .attr("x2", width/2-392.14)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -645,18 +811,18 @@ svg.append("line")
         .delay(800)
         .duration(800)
         .attr("x2", width/2-239.28)
-        .attr("y2", height/2)
+        .attr("y2", height/2+100)
     .transition()
         .delay(5600)
         .duration(800)
-        .attr("y1", height/2-50)
-        .attr("y2", height/2-50);
+        .attr("y1", height/2+50)
+        .attr("y2", height/2+50);
 
 svg.append("line")
     .attr("x1", width/2-234.28)
     .attr("x2", width/2-234.28)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -664,18 +830,18 @@ svg.append("line")
         .delay(1600)
         .duration(800)
         .attr("x2", width/2-81.42)
-        .attr("y2", height/2)
+        .attr("y2", height/2+100)
     .transition()
         .delay(4800)
         .duration(800)
-        .attr("y1", height/2-100)
-        .attr("y2", height/2-100);
+        .attr("y1", height/2)
+        .attr("y2", height/2);
 
 svg.append("line")
     .attr("x1", width/2-76.42)
     .attr("x2", width/2-76.42)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -683,18 +849,18 @@ svg.append("line")
         .delay(2400)
         .duration(800)
         .attr("x2", width/2+76.44)
-        .attr("y2", height/2)
+        .attr("y2", height/2+100)
     .transition()
         .delay(4000)
         .duration(800)
-        .attr("y1", height/2-150)
-        .attr("y2", height/2-150);
+        .attr("y1", height/2-50)
+        .attr("y2", height/2-50);
 
 svg.append("line")
     .attr("x1", width/2+81.44)
     .attr("x2", width/2+81.44)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -702,18 +868,18 @@ svg.append("line")
         .delay(3200)
         .duration(800)
         .attr("x2", width/2+224.3)
-        .attr("y2", height/2)
+        .attr("y2", height/2+100)
     .transition()
         .delay(3200)
         .duration(800)
-        .attr("y1", height/2-200)
-        .attr("y2", height/2-200);
+        .attr("y1", height/2-100)
+        .attr("y2", height/2-100);
 
 svg.append("line")
     .attr("x1", width/2+229.3)
     .attr("x2", width/2+229.3)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -721,18 +887,18 @@ svg.append("line")
         .delay(4000)
         .duration(800)
         .attr("x2", width/2+382.16)
-        .attr("y2", height/2)
+        .attr("y2", height/2+100)
     .transition()
         .delay(2400)
         .duration(800)
-        .attr("y1", height/2-250)
-        .attr("y2", height/2-250);;
+        .attr("y1", height/2-150)
+        .attr("y2", height/2-150);;
 
 svg.append("line")
     .attr("x1", width/2+387.16)
     .attr("x2", width/2+387.16)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -740,14 +906,12 @@ svg.append("line")
         .delay(4800)
         .duration(800)
         .attr("x2", width/2+550)
-        .attr("y2", height/2)
+        .attr("y2", height/2+100)
     .transition()
         .delay(1600)
         .duration(800)
-        .attr("y1", height/2-300)
-        .attr("y2", height/2-300);
-
-/////Step Lables/////
+        .attr("y1", height/2-200)
+        .attr("y2", height/2-200);
 
 });
 
@@ -763,21 +927,21 @@ svg.selectAll("text").remove();
 svg.append("line")
     .attr("x1", width/2-550)
     .attr("x2", width/2-550)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
     .transition()
         .duration(800)
         .attr("x2", width/2-416.88)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2-411.88)
     .attr("x2", width/2-411.88)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -785,13 +949,13 @@ svg.append("line")
         .delay(800)
         .duration(800)
         .attr("x2", width/2-278.76)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2-273.76)
     .attr("x2", width/2-273.76)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -799,13 +963,13 @@ svg.append("line")
         .delay(1600)
         .duration(800)
         .attr("x2", width/2-140.64)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2-135.64)
     .attr("x2", width/2-135.64)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -813,13 +977,13 @@ svg.append("line")
         .delay(2400)
         .duration(800)
         .attr("x2", width/2-2.51)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2+2.49)
     .attr("x2", width/2+2.49)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -827,13 +991,13 @@ svg.append("line")
         .delay(3200)
         .duration(800)
         .attr("x2", width/2+135.62)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2+140.62)
     .attr("x2", width/2+140.62)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -841,13 +1005,13 @@ svg.append("line")
         .delay(4000)
         .duration(800)
         .attr("x2", width/2+273.75)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2+278.75)
     .attr("x2", width/2+278.75)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -855,13 +1019,13 @@ svg.append("line")
         .delay(4800)
         .duration(800)
         .attr("x2", width/2+411.88)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 svg.append("line")
     .attr("x1", width/2+416.88)
     .attr("x2", width/2+416.88)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(255,255,255,.5)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
@@ -869,171 +1033,285 @@ svg.append("line")
         .delay(5600)
         .duration(800)
         .attr("x2", width/2+550)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
 /////Green Lines/////
 //rgb(78,130,131)
-svg.append("line")
+var m_txt1 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)
+    .text("Three Year LPR")
+    .style("opacity", 0)
+    .style("font-size", 30)
+    .style("font-weight", 400);
+
+var m_line1 = svg.append("line")
     .attr("x1", width/2-550)
     .attr("x2", width/2-550)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
     .attr("element-anchor", "center")
-    .transition()
+    
+    m_line1.transition()
         .duration(800)
         .attr("x2", width/2-416.88)
-        .attr("y2", height/2);
+        .attr("y2", height/2+100);
 
-svg.append("line")
+    m_line1.on("mouseover", function(){
+            m_txt1.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            m_txt1.style("opacity", 0);
+        });    
+//2
+var m_txt2 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)
+    .text("One Year of Service")
+    .style("opacity", 0)
+    .style("font-size", 30)
+    .style("font-weight", 400);
+
+var m_line2 =svg.append("line")
     .attr("x1", width/2-411.88)
     .attr("x2", width/2-411.88)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
+    .attr("element-anchor", "center");
+    
+    m_line2.transition()
         .delay(800)
         .duration(800)
         .attr("x2", width/2-278.76)
-        .attr("y2", height/2)
+        .attr("y2", height/2+100)
     .transition()
         .delay(6400)
+        .duration(800)
+        .attr("y1", height/2+50)
+        .attr("y2", height/2+50);
+
+    m_line2.on("mouseover", function(){
+            m_txt2.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            m_txt2.style("opacity", 0);
+        });    
+//3
+var m_txt3 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)
+    .text("Certify Service")
+    .style("opacity", 0)
+    .style("font-size", 30)
+    .style("font-weight", 400);
+
+var m_line3 = svg.append("line")
+    .attr("x1", width/2-273.76)
+    .attr("x2", width/2-273.76)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
+    .attr("stroke", "rgb(78,130,131)")
+    .attr("stroke-width", 15)
+    .attr("element-anchor", "center");
+    
+    m_line3.transition()
+        .delay(1600)
+        .duration(800)
+        .attr("x2", width/2-140.64)
+        .attr("y2", height/2+100)
+    .transition()
+        .delay(5600)
+        .duration(800)
+        .attr("y1", height/2)
+        .attr("y2", height/2);
+
+    m_line3.on("mouseover", function(){
+            m_txt3.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            m_txt3.style("opacity", 0);
+        });     
+//4
+var m_txt4 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)
+    .text("Continuous Residence")
+    .style("opacity", 0)
+    .style("font-size", 30)
+    .style("font-weight", 400);
+
+var m_line4 = svg.append("line")
+    .attr("x1", width/2-135.64)
+    .attr("x2", width/2-135.64)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
+    .attr("stroke", "rgb(78,130,131)")
+    .attr("stroke-width", 15)
+    .attr("element-anchor", "center");
+    
+    m_line4.transition()
+        .delay(2400)
+        .duration(800)
+        .attr("x2", width/2-2.51)
+        .attr("y2", height/2+100)
+    .transition()
+        .delay(4800)
         .duration(800)
         .attr("y1", height/2-50)
         .attr("y2", height/2-50);
 
-svg.append("line")
-    .attr("x1", width/2-273.76)
-    .attr("x2", width/2-273.76)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    m_line4.on("mouseover", function(){
+            m_txt4.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            m_txt4.style("opacity", 0);
+        });     
+//5
+var m_txt5 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)  
+    .text("Language Fundamentals")
+    .style("opacity", 0)
+    .style("font-size", 30)
+    .style("font-weight", 400);
+
+var m_line5 = svg.append("line")
+    .attr("x1", width/2+2.49)
+    .attr("x2", width/2+2.49)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
-        .delay(1600)
+    .attr("element-anchor", "center");
+
+    m_line5.transition()
+        .delay(3200)
         .duration(800)
-        .attr("x2", width/2-140.64)
-        .attr("y2", height/2)
+        .attr("x2", width/2+135.62)
+        .attr("y2", height/2+100)
     .transition()
-        .delay(5600)
+        .delay(4000)
         .duration(800)
         .attr("y1", height/2-100)
         .attr("y2", height/2-100);
 
-svg.append("line")
-    .attr("x1", width/2-135.64)
-    .attr("x2", width/2-135.64)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    m_line5.on("mouseover", function(){
+            m_txt5.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            m_txt5.style("opacity", 0);
+        });
+//6
+var m_txt6 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)  
+    .text("Civic Knowledge Test")
+    .style("opacity", 0)
+    .style("font-size", 30)
+    .style("font-weight", 400);
+
+var m_line6 = svg.append("line")
+    .attr("x1", width/2+140.62)
+    .attr("x2", width/2+140.62)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
-        .delay(2400)
+    .attr("element-anchor", "center");
+
+    m_line6.transition()
+        .delay(4000)
         .duration(800)
-        .attr("x2", width/2-2.51)
-        .attr("y2", height/2)
+        .attr("x2", width/2+273.75)
+        .attr("y2", height/2+100)
     .transition()
-        .delay(4800)
+        .delay(3200)
         .duration(800)
         .attr("y1", height/2-150)
         .attr("y2", height/2-150);
 
-svg.append("line")
-    .attr("x1", width/2+2.49)
-    .attr("x2", width/2+2.49)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
-    .attr("stroke", "rgb(78,130,131)")
-    .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
-        .delay(3200)
-        .duration(800)
-        .attr("x2", width/2+135.62)
-        .attr("y2", height/2)
-    .transition()
-        .delay(4000)
-        .duration(800)
-        .attr("y1", height/2-200)
-        .attr("y2", height/2-200);;
+    m_line6.on("mouseover", function(){
+            m_txt6.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            m_txt6.style("opacity", 0);
+        });
+//7
+var m_txt7 = svg.append('text')
+    .attr("x", width/2-550)
+    .attr("y", 150)  
+    .text("Proof of Moral Character")
+    .style("opacity", 0)
+    .style("font-size", 30);
 
-svg.append("line")
-    .attr("x1", width/2+140.62)
-    .attr("x2", width/2+140.62)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
-    .attr("stroke", "rgb(78,130,131)")
-    .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
-        .delay(4000)
-        .duration(800)
-        .attr("x2", width/2+273.75)
-        .attr("y2", height/2)
-    .transition()
-        .delay(3200)
-        .duration(800)
-        .attr("y1", height/2-250)
-        .attr("y2", height/2-250);
-
-svg.append("line")
+var m_line7 = svg.append("line")
     .attr("x1", width/2+278.75)
     .attr("x2", width/2+278.75)
-    .attr("y1", height/2)
-    .attr("y2", height/2)
+    .attr("y1", height/2+100)
+    .attr("y2", height/2+100)
     .attr("stroke", "rgb(78,130,131)")
     .attr("stroke-width", 15)
-    .attr("element-anchor", "center")
-    .transition()
+    .attr("element-anchor", "center");
+    
+    m_line7.transition()
         .delay(4800)
         .duration(800)
         .attr("x2", width/2+411.88)
-        .attr("y2", height/2)
+        .attr("y2", height/2+100)
     .transition()
         .delay(2400)
         .duration(800)
-        .attr("y1", height/2-300)
-        .attr("y2", height/2-300);
+        .attr("y1", height/2-200)
+        .attr("y2", height/2-200);
 
-        var txt8 = svg.append('text')
-        .attr("x", 100)
-        .attr("y", 100)
-        .text("Oath of Alligence : You are not a naturalized citizen until you pledge allegience to the United States through a commitment ceremony.")
+    m_line7.on("mouseover", function(){
+            m_txt7.style("opacity", .75)
+                .style("fill", "white");
+        }).on("mouseout", function(){
+            m_txt7.style("opacity", 0);
+        });
+//8
+    var m_txt8 = svg.append('text')
+        .attr("x", width/2-550)
+        .attr("y", 150)
+        .text("Oath of Allegience")
         .style("opacity", 0)
-        .style("max-length", 100)
-        .style("overflow-wrap", "normal");
+        .style("font-size", 30)
+        .style("font-weight", 400);
     
-    var line8 = svg.append("line")
+    var m_line8 = svg.append("line")
         .attr("x1", width/2+416.88)
         .attr("x2", width/2+416.88)
-        .attr("y1", height/2)
-        .attr("y2", height/2)
+        .attr("y1", height/2+100)
+        .attr("y2", height/2+100)
         .attr("stroke", "rgb(78,130,131)")
         .attr("stroke-width", 15)
-        .attr("element-anchor", "center");
+        .attr("element-anchor", "left");
     
-        line8.transition()
+        m_line8.transition()
             .delay(5600)
             .duration(800)
             .attr("x2", width/2+550)
-            .attr("y2", height/2)
+            .attr("y2", height/2+100)
         .transition()
             .delay(1600)
             .duration(800)
-            .attr("y1", height/2-350)
-            .attr("y2", height/2-350);
+            .attr("y1", height/2-250)
+            .attr("y2", height/2-250);
     
-        line8.on("mouseover", function(){
-            txt8.style("opacity", 1)
+        m_line8.on("mouseover", function(){
+            m_txt8.style("opacity", .75)
                 .style("fill", "white");
         }).on("mouseout", function(){
-            txt8.style("opacity", 0);
+            m_txt8.style("opacity", 0);
         });
+
+
+    });
 
 });
 
