@@ -252,7 +252,7 @@ Promise.all([worldmapPromise, countryPromise])
         // Generate description text and hover effect
             lines.on("mouseover", function(e, d){
                 tooltip.style("visibility", "visible")
-                .style("left", "1020px")
+                .style("left", "1070px")
                 .style("top", "120px")
                 .html(` <font size="+2">${d.title}</font> <br> <br>${d.description}`);
         
