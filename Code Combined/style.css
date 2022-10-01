@@ -1,0 +1,147 @@
+* {
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.header {
+    display: grid;
+    grid-template-columns: 25vw 75vw;
+    grid-template-rows: 30vh;
+    grid-template-areas: "title intro";
+}
+
+#title {
+    grid-area: "title";
+}
+
+#intro{
+    grid-area: "intro";
+}
+
+.visIntro {
+    display: grid;
+    grid-template-columns: 15vw 30vw 40vw 15vw;
+    grid-template-rows: 30vh;
+    grid-template-areas: "spacer1 title info spacer2";
+    text-align: left;
+}
+
+
+#spacer1 {
+    grid-column: 1;
+}
+
+#title {
+    grid-column: 2;
+}
+
+#info {
+    font-size: 15px;
+    line-height: 1.5;
+    grid-column: 3;
+    padding-top: 35px;
+}
+
+#spacer2 {
+    grid-column: 4;
+}
+
+h1 {
+    font-size: 30px;
+    font-weight: 700;
+    color: rgb(218, 208, 167);
+    line-height: 30%;
+}
+
+h2 {
+    font-size: 50px;
+    text-align: left;
+    top: 0;
+    color: rgb(218, 208, 167);
+}
+
+html, body {
+    margin: 0px;
+    font-family: "Work Sans", sans-serif;
+    font-size: 20px;
+    color: rgb(255, 255, 255);
+    background-color: rgb(6, 6, 6);
+    text-align: center;
+}
+
+button {
+    background-color: transparent;
+    border: none;
+    padding-right: 20px;
+    padding-top: 0px;
+    padding-bottom: 60px;
+    text-align: left;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 15px;
+    color: white;
+    font-family: "Work Sans", sans-serif;
+    opacity: .4;
+}
+
+button:hover {
+    opacity: 1;
+}
+
+button:focus {
+    opacity: 1;
+}
+
+#chart {
+    position: relative;
+    padding-bottom: 120px;
+    margin-left: -300px;
+}
+
+#chart2 {
+    position: relative;
+    padding-top: 60px;
+}
+
+#map {
+    position: relative;
+    margin-top: 120px;
+    margin-left: 30px;
+}
+
+.tooltip{
+    position: absolute;
+    visibility: hidden;
+    font-family: "Work Sans", sans-serif;
+    font-size: 10pt;
+    pointer-events: none;
+    max-width: 200px;
+    overflow-wrap:normal;
+    text-align: left;
+}
+
+.tooltip2{
+    position: absolute;
+    visibility: hidden;
+    font-family: "Work Sans", sans-serif;
+    font-size: 20pt;
+    padding: 2px;
+    pointer-events: none;
+    max-width: 270px;
+    overflow-wrap:normal;
+    text-align: left;
+}
+
+.tooltip3{
+    position: absolute;
+    visibility: hidden;
+    font-family: "Work Sans", sans-serif;
+    font-size: 30pt;
+    padding: 2px;
+    pointer-events: none;
+    max-width: 700px;
+    overflow-wrap:normal;
+    text-align: left;
+    opacity: .5
+}
